@@ -1,0 +1,3 @@
+ISP Balance: баланс Нетнорда, тариф, расходы и напоминания о пополнении в Home Assistant. Установка через HACS.
+
+Topics: home-assistant, hacs, custom-integration, netnord, isp, balance, python

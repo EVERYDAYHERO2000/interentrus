@@ -1,0 +1,23 @@
+name: Ошибка
+description: Проблема с установкой, авторизацией или сенсорами
+body:
+  - type: markdown
+    attributes:
+      value: Не прикладывайте пароли, cookies, токены и полные страницы кабинета.
+  - type: input
+    id: versions
+    attributes:
+      label: Версии Home Assistant, HACS и интеграции
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Что произошло и что ожидалось
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Обезличенные логи
+      render: text
