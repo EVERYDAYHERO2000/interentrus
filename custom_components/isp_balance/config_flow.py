@@ -35,12 +35,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await NetnordClient(session, data["username"], data["password"]).async_balance()
             except AuthenticationError:
                 errors["base"] = "invalid_auth"
-            except aiohttp.ClientError, TimeoutError:
+            except (aiohttp.ClientError, TimeoutError):
                 errors["base"] = "cannot_connect"
             except ProviderError:
                 errors["base"] = "invalid_response"
             finally:
-                await session.close()
+                session.detach()
             if not errors:
                 if reauth:
                     return self.async_update_reload_and_abort(entry, data_updates=data)

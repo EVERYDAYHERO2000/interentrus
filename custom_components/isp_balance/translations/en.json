@@ -1,0 +1,36 @@
+{
+  "title": "ISP Balance",
+  "config": {
+    "step": {
+      "user": {
+        "title": "ISP account balance",
+        "description": "Enter your provider account credentials. Currently supports Netnord.",
+        "data": {
+          "provider": "Provider",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentication failed. Check your username and password.",
+      "cannot_connect": "Cannot connect to the provider account.",
+      "invalid_response": "Could not parse the balance. The provider page may have changed."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Credentials updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Top-up reminder",
+        "description": "The sensor turns on when remaining days reach the threshold, the balance is zero or negative, or the minimum payment is positive.",
+        "data": {
+          "warning_days": "Days before the forecast date"
+        }
+      }
+    }
+  }
+}

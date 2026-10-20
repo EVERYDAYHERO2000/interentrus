@@ -3,32 +3,32 @@
   "config": {
     "step": {
       "user": {
-        "title": "Баланс интернет-провайдера",
-        "description": "Введите данные личного кабинета. Поддерживается Нетнорд.",
+        "title": "ISP account balance",
+        "description": "Enter your provider account credentials. Currently supports Netnord.",
         "data": {
-          "provider": "Провайдер",
-          "username": "Логин",
-          "password": "Пароль"
+          "provider": "Provider",
+          "username": "Username",
+          "password": "Password"
         }
       }
     },
     "error": {
-      "invalid_auth": "Не удалось войти. Проверьте логин и пароль.",
-      "cannot_connect": "Нет связи с кабинетом провайдера.",
-      "invalid_response": "Не удалось распознать баланс. Возможно, кабинет изменился."
+      "invalid_auth": "Authentication failed. Check your username and password.",
+      "cannot_connect": "Cannot connect to the provider account.",
+      "invalid_response": "Could not parse the balance. The provider page may have changed."
     },
     "abort": {
-      "already_configured": "Этот аккаунт уже добавлен.",
-      "reauth_successful": "Учётные данные обновлены."
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Credentials updated."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Напоминание о пополнении",
-        "description": "Сенсор включается при остатке дней не больше порога, неположительном балансе или положительном минимальном платеже.",
+        "title": "Top-up reminder",
+        "description": "The sensor turns on when remaining days reach the threshold, the balance is zero or negative, or the minimum payment is positive.",
         "data": {
-          "warning_days": "Напоминать за сколько дней"
+          "warning_days": "Days before the forecast date"
         }
       }
     }

@@ -21,7 +21,7 @@ async def async_setup_entry(hass, entry):
         entry.runtime_data = coordinator
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except BaseException:
-        await session.close()
+        session.detach()
         raise
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
@@ -30,7 +30,7 @@ async def async_setup_entry(hass, entry):
 async def async_unload_entry(hass, entry):
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
-        await entry.runtime_data.client.session.close()
+        entry.runtime_data.client.session.detach()
     return unloaded
 
 
