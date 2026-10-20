@@ -1,6 +1,7 @@
 """UI setup and credential renewal."""
 
 import hashlib
+import logging
 
 import aiohttp
 import voluptuous as vol
@@ -11,6 +12,8 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from .const import CONF_WARNING_DAYS, DEFAULT_WARNING_DAYS, DOMAIN, PROVIDER_NETNORD
 from .providers import AuthenticationError, ProviderError
 from .providers.factory import PROVIDER_NAMES, create_client
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -39,7 +42,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except (aiohttp.ClientError, TimeoutError):
                 errors["base"] = "cannot_connect"
-            except ProviderError:
+            except ProviderError as err:
+                # ProviderError messages are fixed diagnostic strings, never page contents.
+                _LOGGER.warning("%s setup response could not be parsed: %s", data["provider"], err)
                 errors["base"] = "invalid_response"
             finally:
                 session.detach()

@@ -143,3 +143,29 @@ async def test_login_followed_by_authenticated_account_page():
     client._request = AsyncMock(side_effect=[LOGIN, LOGIN, sidebar(), sidebar() + ACCOUNT])
     assert (await client.async_balance()).monthly_fee == Decimal(1000)
     assert client._request.call_args_list[-1].args == ("GET", ACCOUNT_URL)
+
+
+@pytest.mark.parametrize("amount", ["123,45", "0,00", "-25,10"])
+def test_unrepaired_nested_provider_paragraphs(amount):
+    html = f"""<div class="carbon_modules_userinfosidebar">
+    <div class="sidebar-block-header">Баланс ЛС:</div>
+    <div class="user-data"><p class="no-margin">
+    <p class="no-margin">{amount} <i class="fa fa-rub"></i></p>
+    <p><small>Хватит до 31.10.2026</small></p></p></div>
+    <div class="sidebar-block-header">Мин. платеж:</div>
+    <div class="user-data"><p class="no-margin"><p class="no-margin">0,00 <i class="fa fa-rub"></i></p></p></div>
+    </div>"""
+    result = parse_balance(html)
+    assert result.amount == Decimal(amount.replace(",", "."))
+    assert result.minimum_payment == Decimal("0")
+    assert result.sufficient_until == date(2026, 10, 31)
+
+
+@pytest.mark.parametrize("currency", ["₽", "руб.", "RUB"])
+def test_explicit_currency_text(currency):
+    assert parse_balance(sidebar("123,45 " + currency)).amount == Decimal("123.45")
+
+
+def test_two_amounts_in_one_balance_block_fail_closed():
+    with pytest.raises(ProviderError):
+        parse_balance(sidebar().replace("<p></p>", "<p>456,00</p>", 1))

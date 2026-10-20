@@ -121,13 +121,10 @@ def parse_balance(html: str, today: date | None = None) -> AccountBalance:
         data = header.find_next_sibling()
         if data is None or "user-data" not in data.get("class", []):
             raise ProviderError("Balance block missing")
-        # The provider emits empty paragraphs before the monetary amount.
-        paragraphs = [p.get_text(" ", strip=True) for p in data.find_all("p", recursive=False)]
-        text = next((text for text in paragraphs if text), "")
-        text = text.replace("\xa0", " ").replace("\u202f", " ").replace("−", "-")
-        if not re.fullmatch(r"[+-]?\d+(?: \d{3})*(?:[,.]\d{1,2})?", text):
+        value = parse_block_money(data)
+        if value is None:
             raise ProviderError("Unrecognized balance amount")
-        amounts.append(Decimal(text.replace(" ", "").replace(",", ".")))
+        amounts.append(value)
         forecast = data.get_text(" ", strip=True)
         match = re.search(r"Хватит\s+до\s+(\d{2}\.\d{2}\.\d{4})(?!\d)", forecast, re.IGNORECASE)
         if match:
@@ -143,8 +140,7 @@ def parse_balance(html: str, today: date | None = None) -> AccountBalance:
         if header.get_text(" ", strip=True).rstrip(":").casefold() == "мин. платеж":
             data = header.find_next_sibling()
             if data is not None and "user-data" in data.get("class", []):
-                values = [p.get_text(" ", strip=True) for p in data.find_all("p", recursive=False)]
-                minimum_payment = parse_money(next((v for v in values if v), ""))
+                minimum_payment = parse_block_money(data)
     tariff = monthly_fee = None
     for row in soup.select(".carbon_modules_abonentstatus tr"):
         cells = row.find_all("td", recursive=False)
@@ -185,3 +181,28 @@ def parse_money(text: str) -> Decimal | None:
     if not re.fullmatch(r"[+-]?\d+(?: \d{3})*(?:[,.]\d{1,2})?", text):
         return None
     return Decimal(text.replace(" ", "").replace(",", "."))
+
+
+def parse_block_money(data) -> Decimal | None:
+    """Read the monetary paragraph without its surrounding forecast.
+
+    Carbon Billing can nest <p> tags. Browsers repair them, but html.parser
+    preserves the outer wrapper, whose text contains both amount and date.
+    Only leaf paragraphs can represent the monetary value.
+    """
+    paragraphs = data.find_all("p")
+    candidates = []
+    for paragraph in paragraphs:
+        if paragraph.find("p") is not None:
+            continue
+        text = paragraph.get_text(" ", strip=True)
+        text = re.sub(r"\s*(?:₽|руб\.?|RUB)\s*$", "", text, flags=re.IGNORECASE)
+        if (value := parse_money(text)) is not None:
+            candidates.append(value)
+    if not paragraphs:
+        text = re.sub(
+            r"\s*(?:₽|руб\.?|RUB)\s*$", "", data.get_text(" ", strip=True), flags=re.IGNORECASE
+        )
+        if (value := parse_money(text)) is not None:
+            candidates.append(value)
+    return candidates[0] if len(candidates) == 1 else None
