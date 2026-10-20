@@ -2,7 +2,7 @@
   <img src="custom_components/isp_balance/brand/icon@2x.png" width="112" alt="ISP Balance — кошелёк и сигнал сети">
 </p>
 <h1 align="center">ISP Balance</h1>
-<p align="center">Баланс интернет-провайдера в Home Assistant</p>
+<p align="center">Личные кабинеты провайдеров Московской области в Home Assistant<br>Нетнорд · Микронмедиа</p>
 <p align="center">
   <a href="https://github.com/EVERYDAYHERO2000/interentrus/actions/workflows/validate.yml"><img alt="Проверки" src="https://github.com/EVERYDAYHERO2000/interentrus/actions/workflows/validate.yml/badge.svg"></a>
   <img alt="Home Assistant 2026.3+" src="https://img.shields.io/badge/Home%20Assistant-2026.3%2B-18BCF2">
@@ -10,11 +10,21 @@
   <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
-Пользовательская интеграция получает баланс и сведения о тарифе из личного
-кабинета по логину и паролю. Показывает, на сколько дней хватит денег, и помогает
-напомнить о пополнении. Настраивается через интерфейс Home Assistant, без YAML.
+**ISP Balance — интеграция Home Assistant для личных кабинетов интернет-провайдеров
+Московской области: Нетнорд и Микронмедиа.** Она предназначена для абонентов этих
+провайдеров, которые хотят видеть состояние своего лицевого счёта в умном доме:
+баланс, тариф, расходы и дату, до которой хватит средств.
 
-**Поддерживается Нетнорд. Микрон пока в планах и в интерфейсе не предлагается.**
+Интеграция обращается к личному кабинету по логину и паролю. Настраивается через
+интерфейс Home Assistant, без YAML, и предоставляет сенсоры для напоминаний
+о пополнении.
+
+| Провайдер Московской области | Личный кабинет | Поддержка |
+| --- | --- | --- |
+| **Нетнорд / Net-Nord** | [cabinet.net-nord.ru](https://cabinet.net-nord.ru/cabinet/welcome/) | Реализован клиент и девять сущностей; требуется проверка на установке HA |
+| **Микронмедиа / Micronmedia** | [app.micmedia.ru](https://app.micmedia.ru/auth) | Запланировано; пока не реализовано |
+
+Сейчас при добавлении интеграции можно выбрать **только Нетнорд**.
 Проект независимый, не является официальной интеграцией провайдеров.
 
 > Первая версия для проверки на реальной установке. Структура кабинета изучена
@@ -136,8 +146,10 @@ validation и hassfest; их фактический результат смот�
 
 ## English
 
-Custom Home Assistant integration for ISP billing balances, tariff information
-and top-up reminders. Currently supports **Netnord**; Micron is planned.
+Custom Home Assistant integration for the personal billing accounts of
+**Netnord and Micronmedia**, internet providers serving the **Moscow Region, Russia**.
+Displays balances, tariff details and top-up reminders. The Netnord client is
+implemented; Micronmedia support is planned and is not available yet.
 Requires Home Assistant 2026.3+. Add this repository to HACS as an **Integration**,
 download, restart HA and add **ISP Balance** in Devices & services. Credentials
 are configured in the UI. Live Python login and full HA runtime validation are
