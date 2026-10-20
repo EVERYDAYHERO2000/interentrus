@@ -115,6 +115,7 @@ def parse_balance(html: str, today: date | None = None) -> AccountBalance:
     soup = BeautifulSoup(html, "html.parser")
     amounts = []
     sufficient_until = None
+    forecasts = set()
     for header in soup.select(".carbon_modules_userinfosidebar .sidebar-block-header"):
         if " ".join(header.stripped_strings).strip().rstrip(":").casefold() != "баланс лс":
             continue
@@ -129,18 +130,31 @@ def parse_balance(html: str, today: date | None = None) -> AccountBalance:
         match = re.search(r"Хватит\s+до\s+(\d{2}\.\d{2}\.\d{4})(?!\d)", forecast, re.IGNORECASE)
         if match:
             try:
-                sufficient_until = datetime.strptime(match[1], "%d.%m.%Y").date()
+                forecasts.add(datetime.strptime(match[1], "%d.%m.%Y").date())
             except ValueError:
                 # A broken forecast must not discard a valid monetary balance.
-                sufficient_until = None
-    if len(amounts) != 1:
-        raise ProviderError("Balance block missing or ambiguous")
+                pass
+    # The cabinet includes the same sidebar twice (desktop and mobile menus).
+    # Accept identical copies, but never choose between conflicting amounts.
+    unique_amounts = set(amounts)
+    if not unique_amounts:
+        raise ProviderError("Balance block missing")
+    if len(unique_amounts) != 1:
+        raise ProviderError("Conflicting balance amounts")
+    if len(forecasts) > 1:
+        raise ProviderError("Conflicting balance forecasts")
+    sufficient_until = next(iter(forecasts), None)
     minimum_payment = None
+    minimum_payments = set()
     for header in soup.select(".carbon_modules_userinfosidebar .sidebar-block-header"):
         if header.get_text(" ", strip=True).rstrip(":").casefold() == "мин. платеж":
             data = header.find_next_sibling()
             if data is not None and "user-data" in data.get("class", []):
-                minimum_payment = parse_block_money(data)
+                if (value := parse_block_money(data)) is not None:
+                    minimum_payments.add(value)
+    if len(minimum_payments) > 1:
+        raise ProviderError("Conflicting minimum payments")
+    minimum_payment = next(iter(minimum_payments), None)
     tariff = monthly_fee = None
     for row in soup.select(".carbon_modules_abonentstatus tr"):
         cells = row.find_all("td", recursive=False)

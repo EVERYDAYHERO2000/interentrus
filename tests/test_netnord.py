@@ -42,7 +42,7 @@ def test_balance(amount, expected):
     [
         "<p>Balance unavailable</p>",
         sidebar("ошибка"),
-        sidebar() + sidebar(),
+        sidebar() + sidebar("999,01"),
         sidebar("NaN"),
     ],
 )
@@ -169,3 +169,39 @@ def test_explicit_currency_text(currency):
 def test_two_amounts_in_one_balance_block_fail_closed():
     with pytest.raises(ProviderError):
         parse_balance(sidebar().replace("<p></p>", "<p>456,00</p>", 1))
+
+
+def test_desktop_and_mobile_copies_of_balance_are_identical():
+    # The live cabinet renders both menus in the same HTML response.
+    html = (
+        '<nav class="desktop-menu">'
+        + sidebar()
+        + '</nav><nav class="mobile-menu">'
+        + sidebar()
+        + "</nav>"
+    )
+    result = parse_balance(html)
+    assert result.amount == Decimal("123.45")
+    assert result.minimum_payment == Decimal("999.00")
+    assert result.sufficient_until == date(2026, 12, 31)
+
+
+def test_conflicting_desktop_mobile_forecasts_fail_closed():
+    html = sidebar() + sidebar().replace("31.12.2026", "30.12.2026")
+    with pytest.raises(ProviderError, match="Conflicting balance forecasts"):
+        parse_balance(html)
+
+
+def test_conflicting_desktop_mobile_minimum_payments_fail_closed():
+    html = sidebar() + sidebar().replace("999,00", "111,00")
+    with pytest.raises(ProviderError, match="Conflicting minimum payments"):
+        parse_balance(html)
+
+
+def test_hidden_personal_information_sidebar_is_not_a_balance():
+    html = (
+        sidebar()
+        + sidebar()
+        + '<div class="carbon_modules_userinfosidebar"><div class="sidebar-block-header">Номер лицевого счета</div><div class="user-data"><p>123456789</p></div></div>'
+    )
+    assert parse_balance(html).amount == Decimal("123.45")
