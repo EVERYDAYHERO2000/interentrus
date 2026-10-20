@@ -4,7 +4,7 @@ Balance extraction follows the authenticated sidebar structure.
 """
 
 import re
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
@@ -113,9 +113,7 @@ class NetnordClient:
 def parse_balance(html: str, today: date | None = None) -> AccountBalance:
     """Extract the amount associated with Баланс ЛС, never minimum payment."""
     soup = BeautifulSoup(html, "html.parser")
-    amounts = []
-    sufficient_until = None
-    forecasts = set()
+    amounts = set()
     for header in soup.select(".carbon_modules_userinfosidebar .sidebar-block-header"):
         if " ".join(header.stripped_strings).strip().rstrip(":").casefold() != "баланс лс":
             continue
@@ -125,67 +123,22 @@ def parse_balance(html: str, today: date | None = None) -> AccountBalance:
         value = parse_block_money(data)
         if value is None:
             raise ProviderError("Unrecognized balance amount")
-        amounts.append(value)
-        forecast = data.get_text(" ", strip=True)
-        match = re.search(r"Хватит\s+до\s+(\d{2}\.\d{2}\.\d{4})(?!\d)", forecast, re.IGNORECASE)
-        if match:
-            try:
-                forecasts.add(datetime.strptime(match[1], "%d.%m.%Y").date())
-            except ValueError:
-                # A broken forecast must not discard a valid monetary balance.
-                pass
-    # The cabinet includes the same sidebar twice (desktop and mobile menus).
-    # Accept identical copies, but never choose between conflicting amounts.
-    unique_amounts = set(amounts)
-    if not unique_amounts:
+        amounts.add(value)
+    # Desktop and mobile menus repeat the same amount.
+    if not amounts:
         raise ProviderError("Balance block missing")
-    if len(unique_amounts) != 1:
+    if len(amounts) != 1:
         raise ProviderError("Conflicting balance amounts")
-    if len(forecasts) > 1:
-        raise ProviderError("Conflicting balance forecasts")
-    sufficient_until = next(iter(forecasts), None)
-    minimum_payment = None
-    minimum_payments = set()
-    for header in soup.select(".carbon_modules_userinfosidebar .sidebar-block-header"):
-        if header.get_text(" ", strip=True).rstrip(":").casefold() == "мин. платеж":
-            data = header.find_next_sibling()
-            if data is not None and "user-data" in data.get("class", []):
-                if (value := parse_block_money(data)) is not None:
-                    minimum_payments.add(value)
-    if len(minimum_payments) > 1:
-        raise ProviderError("Conflicting minimum payments")
-    minimum_payment = next(iter(minimum_payments), None)
-    tariff = monthly_fee = None
+    fees = set()
     for row in soup.select(".carbon_modules_abonentstatus tr"):
         cells = row.find_all("td", recursive=False)
         if len(cells) == 2 and cells[0].get_text(strip=True) == "Тариф":
             text = cells[1].get_text(" ", strip=True)
             match = re.fullmatch(r"(.+?):\s*([\d ,.\xa0\u202f]+)\s*руб\.\s*/\s*мес\.", text)
-            if match:
-                tariff = match[1].strip().strip('"«»')
-                monthly_fee = parse_money(match[2].strip())
-            else:
-                tariff = text or None
-    expenses = []
-    expense_block = soup.select_one(".carbon_modules_currentmonthexpenses")
-    if expense_block is not None:
-        for row in expense_block.select("tr"):
-            cells = row.find_all("td", recursive=False)
-            if not cells:
-                continue
-            if len(cells) != 2 or (value := parse_money(cells[1].get_text(strip=True))) is None:
-                expenses = [None]
-                break
-            expenses.append(value)
-    month_expenses = sum(expenses, Decimal(0)) if expenses and None not in expenses else None
+            if match and (fee := parse_money(match[2].strip())) is not None:
+                fees.add(fee)
     return AccountBalance(
-        amounts[0],
-        sufficient_until=sufficient_until,
-        minimum_payment=minimum_payment,
-        tariff=tariff,
-        monthly_fee=monthly_fee,
-        month_expenses=month_expenses,
-        billing_date=today or date.today(),
+        next(iter(amounts)), monthly_fee=next(iter(fees)) if len(fees) == 1 else None
     )
 
 

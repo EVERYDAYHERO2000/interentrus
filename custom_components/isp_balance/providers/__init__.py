@@ -1,7 +1,6 @@
 """Provider clients, independent of Home Assistant."""
 
 from dataclasses import dataclass
-from datetime import date
 from decimal import Decimal
 from typing import Protocol
 
@@ -20,12 +19,7 @@ class AccountBalance:
 
     amount: Decimal
     currency: str = "RUB"
-    sufficient_until: date | None = None
-    minimum_payment: Decimal | None = None
-    tariff: str | None = None
     monthly_fee: Decimal | None = None
-    month_expenses: Decimal | None = None
-    billing_date: date | None = None
 
 
 class Provider(Protocol):

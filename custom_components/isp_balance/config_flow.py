@@ -9,7 +9,14 @@ from homeassistant import config_entries
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import CONF_WARNING_DAYS, DEFAULT_WARNING_DAYS, DOMAIN, PROVIDER_NETNORD
+from .const import (
+    CONF_UPDATE_INTERVAL,
+    CONF_WARNING_DAYS,
+    DEFAULT_UPDATE_INTERVAL,
+    DEFAULT_WARNING_DAYS,
+    DOMAIN,
+    PROVIDER_NETNORD,
+)
 from .providers import AuthenticationError, ProviderError
 from .providers.factory import PROVIDER_NAMES, create_client
 
@@ -92,7 +99,13 @@ class OptionsFlow(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             CONF_WARNING_DAYS, DEFAULT_WARNING_DAYS
                         ),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=365))
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=365)),
+                    vol.Required(
+                        CONF_UPDATE_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
                 }
             ),
         )

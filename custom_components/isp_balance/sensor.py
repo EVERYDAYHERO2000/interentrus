@@ -1,30 +1,13 @@
 """Provider account sensors."""
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import UnitOfTime
 from homeassistant.util import dt as dt_util
 
 from .entity import DailyEntity
-from .logic import daily_cost, remaining_days
+from .logic import daily_cost
 
 SENSORS = [
-    ("balance", "Баланс", "amount", SensorDeviceClass.MONETARY, "RUB", "mdi:wallet"),
-    (
-        "sufficient_until",
-        "Хватит до",
-        "sufficient_until",
-        SensorDeviceClass.DATE,
-        None,
-        "mdi:calendar-clock",
-    ),
-    (
-        "minimum_payment",
-        "Минимальный платёж",
-        "minimum_payment",
-        SensorDeviceClass.MONETARY,
-        "RUB",
-        "mdi:cash",
-    ),
+    ("balance", "Баланс", "amount", SensorDeviceClass.MONETARY, "RUB", "mdi:cash"),
     (
         "monthly_fee",
         "Абонентская плата",
@@ -33,31 +16,7 @@ SENSORS = [
         "RUB",
         "mdi:cash-sync",
     ),
-    (
-        "month_expenses",
-        "Расходы за текущий месяц",
-        "month_expenses",
-        SensorDeviceClass.MONETARY,
-        "RUB",
-        "mdi:cash-minus",
-    ),
-    ("tariff", "Текущий тариф", "tariff", None, None, "mdi:network"),
-    (
-        "daily_cost",
-        "Стоимость дня",
-        None,
-        SensorDeviceClass.MONETARY,
-        "RUB",
-        "mdi:cash-clock",
-    ),
-    (
-        "remaining_days",
-        "Осталось дней",
-        None,
-        SensorDeviceClass.DURATION,
-        UnitOfTime.DAYS,
-        "mdi:calendar-end",
-    ),
+    ("daily_cost", "Стоимость дня", None, SensorDeviceClass.MONETARY, "RUB", "mdi:cash-clock"),
 ]
 
 
@@ -82,12 +41,4 @@ class AccountSensor(DailyEntity, SensorEntity):
         today = dt_util.now().date()
         if self.key == "daily_cost":
             return daily_cost(data, today)
-        if self.key == "remaining_days":
-            return remaining_days(data, today)
-        if self.key == "month_expenses" and data.billing_date is not None:
-            if (today.year, today.month) != (
-                data.billing_date.year,
-                data.billing_date.month,
-            ):
-                return None
         return getattr(data, self.field)

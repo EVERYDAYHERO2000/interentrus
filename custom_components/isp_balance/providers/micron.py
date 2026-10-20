@@ -1,7 +1,6 @@
 """Micronmedia's Linologi mobile API, as used by its public web client."""
 
 import json
-from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
@@ -23,7 +22,7 @@ class MicronClient:
         self.headers = {"x-mobile-uid": str(uuid4())}
 
     async def _request(self, method, path, **kwargs):
-        if path not in {"/login", "/balance", "/tariff", "/statistics"}:
+        if path not in {"/login", "/balance", "/tariff"}:
             raise ProviderError("Unexpected API endpoint")
         async with self.session.request(
             method,
@@ -74,26 +73,14 @@ class MicronClient:
         return data
 
     async def async_balance(self, today=None):
-        today = today or date.today()
         balance = await self._read("/balance")
-        tariff = history = None
-        # Optional endpoints must not hide a valid account balance on failure.
+        tariff = None
+        # A tariff failure must not hide a valid balance.
         try:
             tariff = await self._read("/tariff")
         except (aiohttp.ClientError, TimeoutError, ProviderError):
             pass
-        try:
-            history = await self._read(
-                "/statistics",
-                params={
-                    "type": 0,
-                    "startDate": f"{today:%Y-%m}-01 00:00:00",
-                    "endDate": f"{today:%Y-%m-%d} 23:59:59",
-                },
-            )
-        except (aiohttp.ClientError, TimeoutError, ProviderError):
-            pass
-        return parse_account(balance, tariff, history, today)
+        return parse_account(balance, tariff)
 
 
 def money(value):
@@ -107,21 +94,10 @@ def money(value):
     return result if result.is_finite() else None
 
 
-def forecast_date(value):
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        # Preserve the provider's calendar date; don't shift it through UTC.
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
-    except ValueError:
-        return None
-
-
-def parse_account(balance, tariff=None, history=None, today=None):
+def parse_account(balance, tariff=None):
     amount = money(balance.get("balance"))
     if balance.get("success") is not True or amount is None:
         raise ProviderError("Balance missing from API response")
-    names = []
     monthly_fee = None
     rows = (
         tariff.get("tariffArray")
@@ -129,42 +105,7 @@ def parse_account(balance, tariff=None, history=None, today=None):
         else None
     )
     if isinstance(rows, list) and rows and all(isinstance(row, dict) for row in rows):
-        names = [
-            row["tariffUserName"] for row in rows if isinstance(row.get("tariffUserName"), str)
-        ]
         fees = [money(row.get("tariffCost")) for row in rows]
         if all(row.get("tariffTimeUnit") == "MONTHLY" for row in rows) and None not in fees:
             monthly_fee = sum(fees, Decimal(0))
-    expenses = None
-    events = (
-        history.get("eventArray")
-        if isinstance(history, dict) and history.get("success") is True
-        else None
-    )
-    if isinstance(events, list):
-        total = Decimal(0)
-        for event in events:
-            if not isinstance(event, dict):
-                break
-            if event.get("noData"):
-                continue
-            value = money(event.get("amount"))
-            if value is None:
-                break
-            if value < 0:
-                total -= value
-        else:
-            expenses = total
-    # The web UI uses estimateDate only when balanceState is true.
-    forecast = (
-        forecast_date(balance.get("estimateDate")) if balance.get("balanceState") is True else None
-    )
-    return AccountBalance(
-        amount,
-        sufficient_until=forecast,
-        minimum_payment=money(balance.get("amountForUnlock")),
-        tariff=" / ".join(names) or None,
-        monthly_fee=monthly_fee,
-        month_expenses=expenses,
-        billing_date=today or date.today(),
-    )
+    return AccountBalance(amount, monthly_fee=monthly_fee)

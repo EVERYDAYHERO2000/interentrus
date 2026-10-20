@@ -1,3 +1,3 @@
-InterenetBalans — личные кабинеты провайдеров Московской области: Нетнорд и Микронмедиа. Баланс, тариф, расходы и напоминания в Home Assistant. HACS.
+InterenetBalans — баланс и абонплата провайдеров Московской области: Нетнорд и Микронмедиа. Расчёт стоимости дня и напоминания в Home Assistant. HACS.
 
 Topics: home-assistant, hacs, custom-integration, netnord, micronmedia, moscow-region, isp, balance, python

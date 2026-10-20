@@ -25,10 +25,11 @@
   "options": {
     "step": {
       "init": {
-        "title": "Top-up reminder",
-        "description": "The sensor turns on when remaining days reach the threshold, the balance is zero or negative, or the minimum payment is positive.",
+        "title": "Updates and reminder",
+        "description": "The reminder is calculated from balance and monthly fee. Polling interval: 5–1440 minutes.",
         "data": {
-          "warning_days": "Days before the forecast date"
+          "warning_days": "Days before the forecast date",
+          "update_interval": "Update interval, minutes"
         }
       }
     }

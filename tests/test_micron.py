@@ -1,13 +1,12 @@
 """Micronmedia API protocol tests against synthetic responses."""
 
-from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import aiohttp
 import pytest
 from isp_providers import AuthenticationError, ProviderError
-from isp_providers.micron import MicronClient, forecast_date, money, parse_account
+from isp_providers.micron import MicronClient, money, parse_account
 
 BALANCE = {
     "success": True,
@@ -20,17 +19,12 @@ TARIFF = {
     "success": True,
     "tariffArray": [{"tariffUserName": "Test 100", "tariffCost": 900, "tariffTimeUnit": "MONTHLY"}],
 }
-HISTORY = {"success": True, "eventArray": [{"amount": 1000}, {"amount": -900}, {"amount": -300}]}
 
 
-def test_fields_and_optional_history():
-    data = parse_account(BALANCE, TARIFF, HISTORY, date(2026, 10, 20))
+def test_balance_and_monthly_fee():
+    data = parse_account(BALANCE, TARIFF)
     assert data.amount == Decimal("1250.25")
-    assert data.sufficient_until == date(2026, 11, 1)
-    assert data.minimum_payment == 0
     assert data.monthly_fee == 900
-    assert data.tariff == "Test 100"
-    assert data.month_expenses == 1200
 
 
 @pytest.mark.parametrize("value", [None, True, "NaN", "Infinity", {}, "error"])
@@ -38,22 +32,10 @@ def test_invalid_money(value):
     assert money(value) is None
 
 
-@pytest.mark.parametrize("value", [None, "", "not-a-date", "2026-02-31"])
-def test_invalid_forecast(value):
-    assert forecast_date(value) is None
-
-
-def test_forecast_is_not_shown_for_inactive_balance():
-    assert parse_account(BALANCE | {"balanceState": False}).sufficient_until is None
-
-
-def test_missing_optional_fields():
+def test_missing_monthly_fee():
     data = parse_account({"success": True, "balance": 0})
     assert data.amount == 0
-    assert data.minimum_payment is None
-    assert data.sufficient_until is None
     assert data.monthly_fee is None
-    assert data.month_expenses is None
 
 
 def test_nonmonthly_tariff_is_not_treated_as_monthly():
@@ -62,20 +44,6 @@ def test_nonmonthly_tariff_is_not_treated_as_monthly():
         {"success": True, "tariffArray": [TARIFF["tariffArray"][0] | {"tariffTimeUnit": "DAILY"}]},
     )
     assert data.monthly_fee is None
-    assert data.tariff == "Test 100"
-
-
-def test_corrupt_history_does_not_return_partial_expenses():
-    assert (
-        parse_account(
-            BALANCE, history={"success": True, "eventArray": [{"amount": -50}, {"amount": None}]}
-        ).month_expenses
-        is None
-    )
-
-
-def test_empty_history_has_zero_expenses():
-    assert parse_account(BALANCE, history={"success": True, "eventArray": []}).month_expenses == 0
 
 
 @pytest.mark.parametrize(
@@ -91,16 +59,17 @@ def test_missing_balance_fails_closed(balance):
 async def test_session_renewal():
     client = MicronClient(None, "test", "secret")
     client._request = AsyncMock(
-        side_effect=[AuthenticationError(), {"success": True}, BALANCE, TARIFF, HISTORY]
+        side_effect=[AuthenticationError(), {"success": True}, BALANCE, TARIFF]
     )
-    data = await client.async_balance(today=date(2026, 10, 20))
+    data = await client.async_balance()
     assert data.amount == Decimal("1250.25")
     assert client._request.call_args_list[1].kwargs["json"] == {
         "login": "test",
         "password": "secret",
         "rememberMe": True,
     }
-    assert client._request.call_args_list[-1].kwargs["params"]["startDate"] == "2026-10-01 00:00:00"
+    assert client._request.call_args_list[-1].args == ("GET", "/tariff")
+    assert client._request.await_count == 4
 
 
 @pytest.mark.asyncio
@@ -116,11 +85,11 @@ async def test_bad_credentials():
 @pytest.mark.asyncio
 async def test_optional_endpoint_failure_keeps_balance():
     client = MicronClient(None, "test", "secret")
-    client._request = AsyncMock(side_effect=[BALANCE, aiohttp.ClientError(), ProviderError()])
+    client._request = AsyncMock(side_effect=[BALANCE, aiohttp.ClientError()])
     data = await client.async_balance()
     assert data.amount == Decimal("1250.25")
     assert data.monthly_fee is None
-    assert data.month_expenses is None
+    assert client._request.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -183,3 +152,14 @@ async def test_redirects_never_followed(status):
     with pytest.raises(ProviderError):
         await MicronClient(session, "test", "secret").async_login()
     assert session.request.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_update_only_fetches_balance_and_tariff():
+    client = MicronClient(None, "test", "secret")
+    client._request = AsyncMock(side_effect=[BALANCE, TARIFF])
+    await client.async_balance()
+    assert [call.args for call in client._request.call_args_list] == [
+        ("GET", "/balance"),
+        ("GET", "/tariff"),
+    ]

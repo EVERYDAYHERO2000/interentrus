@@ -1,6 +1,5 @@
 """Client tests without requiring a Home Assistant installation."""
 
-from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock
 
@@ -87,16 +86,10 @@ async def test_foreign_destination_never_requested():
         await client._request("POST", "https://example.org/", data={"PASSWD": "secret"})
 
 
-def test_sufficient_until_date():
-    assert parse_balance(sidebar()).sufficient_until == date(2026, 12, 31)
-
-
 @pytest.mark.parametrize("forecast", ["", "Хватит до 31.02.2026", "Хватит до неизвестно"])
 def test_missing_or_invalid_forecast_keeps_balance(forecast):
     html = sidebar().replace("Хватит до 31.12.2026", forecast)
-    result = parse_balance(html)
-    assert result.sufficient_until is None
-    assert result.amount == Decimal("123.45")
+    assert parse_balance(html).amount == Decimal("123.45")
 
 
 ACCOUNT = """<div class="carbon_modules_abonentstatus"><table>
@@ -107,33 +100,26 @@ ACCOUNT = """<div class="carbon_modules_abonentstatus"><table>
 <tr><td>Услуга</td><td>20,00</td></tr></table></div>"""
 
 
-def test_account_fields_and_expenses_sum():
-    data = parse_balance(sidebar() + ACCOUNT, today=date(2026, 10, 20))
-    assert data.minimum_payment == Decimal(999)
-    assert data.tariff == "Тестовый"
+def test_monthly_fee_from_account():
+    data = parse_balance(sidebar() + ACCOUNT)
     assert data.monthly_fee == Decimal(1000)
-    assert data.month_expenses == Decimal("520.25")
-    assert data.billing_date == date(2026, 10, 20)
-
-
-def test_optional_fields_are_unknown_when_absent():
-    data = parse_balance(sidebar())
-    assert data.tariff is None
-    assert data.monthly_fee is None
-    assert data.month_expenses is None
-
-
-def test_corrupt_expense_does_not_report_partial_total():
-    data = parse_balance(sidebar() + ACCOUNT.replace("20,00", "ошибка"))
-    assert data.month_expenses is None
     assert data.amount == Decimal("123.45")
 
 
-def test_unknown_tariff_format_keeps_name_without_guessing_fee():
+def test_monthly_fee_unknown_when_absent():
+    assert parse_balance(sidebar()).monthly_fee is None
+
+
+def test_unused_expenses_do_not_affect_balance_and_fee():
+    data = parse_balance(sidebar() + ACCOUNT.replace("20,00", "ошибка"))
+    assert data.monthly_fee == Decimal(1000)
+    assert data.amount == Decimal("123.45")
+
+
+def test_unknown_tariff_format_does_not_guess_fee():
     data = parse_balance(
         sidebar() + ACCOUNT.replace('"Тестовый": 1000.0 руб. / мес.', "Особый тариф")
     )
-    assert data.tariff == "Особый тариф"
     assert data.monthly_fee is None
 
 
@@ -157,8 +143,6 @@ def test_unrepaired_nested_provider_paragraphs(amount):
     </div>"""
     result = parse_balance(html)
     assert result.amount == Decimal(amount.replace(",", "."))
-    assert result.minimum_payment == Decimal("0")
-    assert result.sufficient_until == date(2026, 10, 31)
 
 
 @pytest.mark.parametrize("currency", ["₽", "руб.", "RUB"])
@@ -182,20 +166,16 @@ def test_desktop_and_mobile_copies_of_balance_are_identical():
     )
     result = parse_balance(html)
     assert result.amount == Decimal("123.45")
-    assert result.minimum_payment == Decimal("999.00")
-    assert result.sufficient_until == date(2026, 12, 31)
 
 
-def test_conflicting_desktop_mobile_forecasts_fail_closed():
+def test_unused_desktop_mobile_forecasts_do_not_affect_balance():
     html = sidebar() + sidebar().replace("31.12.2026", "30.12.2026")
-    with pytest.raises(ProviderError, match="Conflicting balance forecasts"):
-        parse_balance(html)
+    assert parse_balance(html).amount == Decimal("123.45")
 
 
-def test_conflicting_desktop_mobile_minimum_payments_fail_closed():
+def test_unused_minimum_payments_do_not_affect_balance():
     html = sidebar() + sidebar().replace("999,00", "111,00")
-    with pytest.raises(ProviderError, match="Conflicting minimum payments"):
-        parse_balance(html)
+    assert parse_balance(html).amount == Decimal("123.45")
 
 
 def test_hidden_personal_information_sidebar_is_not_a_balance():
