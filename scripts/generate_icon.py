@@ -1,4 +1,4 @@
-"""Render the project's original wallet/network icon, without external assets."""
+"""Render the project's original network icon, without external assets."""
 
 from pathlib import Path
 
@@ -18,13 +18,14 @@ def box(coords):
 
 
 d.rounded_rectangle(box((0, 0, 512, 512)), radius=112 * S, fill="#123449")
-d.rounded_rectangle(box((80, 174, 420, 410)), radius=42 * S, fill="#32d5bf")
-d.rounded_rectangle(box((80, 145, 382, 226)), radius=28 * S, fill="#8aeee0")
-d.rounded_rectangle(box((303, 257, 442, 342)), radius=23 * S, fill="#123449")
-d.ellipse(box((331, 285, 361, 315)), fill="#ffffff")
-# Wi-Fi waves emerging above the wallet.
-d.arc(box((196, 42, 392, 238)), 220, 320, fill="#ffffff", width=19 * S)
-d.arc(box((235, 83, 353, 201)), 220, 320, fill="#ffffff", width=18 * S)
-d.ellipse(box((284, 136, 304, 156)), fill="#ffffff")
+# Globe: the integration covers internet accounts across providers.
+d.ellipse(box((82, 82, 430, 430)), outline="#32d5bf", width=21 * S)
+d.ellipse(box((164, 82, 348, 430)), outline="#ffffff", width=15 * S)
+d.arc(box((82, 143, 430, 301)), 0, 360, fill="#ffffff", width=15 * S)
+d.arc(box((82, 211, 430, 369)), 0, 360, fill="#ffffff", width=15 * S)
+d.line(box((88, 256, 424, 256)), fill="#32d5bf", width=17 * S)
+# Three network nodes make the mark readable at small sizes.
+for cx, cy in [(256, 82), (104, 340), (408, 340)]:
+    d.ellipse(box((cx - 25, cy - 25, cx + 25, cy + 25)), fill="#32d5bf")
 for size, filename in [(256, "icon.png"), (512, "icon@2x.png")]:
     im.resize((size, size), Image.Resampling.LANCZOS).save(BRAND / filename, optimize=True)
