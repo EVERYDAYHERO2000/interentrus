@@ -4,7 +4,7 @@ from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .coordinator import BalanceCoordinator
-from .providers.netnord import NetnordClient
+from .providers.factory import create_client
 
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
@@ -14,7 +14,9 @@ async def async_setup_entry(hass, entry):
     coordinator = BalanceCoordinator(
         hass,
         entry,
-        NetnordClient(session, entry.data["username"], entry.data["password"]),
+        create_client(
+            entry.data["provider"], session, entry.data["username"], entry.data["password"]
+        ),
     )
     try:
         await coordinator.async_config_entry_first_refresh()

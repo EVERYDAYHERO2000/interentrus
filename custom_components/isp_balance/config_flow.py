@@ -10,7 +10,7 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .const import CONF_WARNING_DAYS, DEFAULT_WARNING_DAYS, DOMAIN, PROVIDER_NETNORD
 from .providers import AuthenticationError, ProviderError
-from .providers.netnord import NetnordClient
+from .providers.factory import PROVIDER_NAMES, create_client
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -32,7 +32,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data["username"] = entry.data["username"]
             session = async_create_clientsession(self.hass)
             try:
-                await NetnordClient(session, data["username"], data["password"]).async_balance()
+                await create_client(
+                    data["provider"], session, data["username"], data["password"]
+                ).async_balance()
             except AuthenticationError:
                 errors["base"] = "invalid_auth"
             except (aiohttp.ClientError, TimeoutError):
@@ -47,12 +49,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 identity = hashlib.sha256(data["username"].encode()).hexdigest()
                 await self.async_set_unique_id(f"{data['provider']}_{identity}")
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(title=f"Netnord {data['username']}", data=data)
+                return self.async_create_entry(
+                    title=f"{PROVIDER_NAMES[data['provider']]} {data['username']}", data=data
+                )
         fields = {}
         if not reauth:
             fields[vol.Required("provider", default=PROVIDER_NETNORD)] = selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=[{"value": PROVIDER_NETNORD, "label": "Нетнорд"}]
+                    options=[{"value": key, "label": name} for key, name in PROVIDER_NAMES.items()]
                 )
             )
             fields[vol.Required("username")] = str
