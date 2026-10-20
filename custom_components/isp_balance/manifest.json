@@ -1,6 +1,6 @@
 {
   "domain": "isp_balance",
-  "name": "ISP Balance",
+  "name": "InterenetBalans",
   "codeowners": [
     "@EVERYDAYHERO2000"
   ],
@@ -10,7 +10,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/EVERYDAYHERO2000/interentrus/issues",
   "requirements": [
-    "beautifulsoup4==4.15.0"
+    "beautifulsoup4==4.13.3"
   ],
   "version": "0.3.0"
 }

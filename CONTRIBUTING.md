@@ -4,7 +4,15 @@
 интеграции, способ установки и ожидаемое поведение. Удалите из логов
 пароли, токены, cookies, номера договоров, адреса и другие персональные данные.
 
-Перед pull request выполните команды из раздела «Разработка» в README.
+Перед pull request выполните:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
+.venv/bin/ruff check custom_components tests scripts
+.venv/bin/ruff format --check custom_components tests scripts
+```
 Изменения парсинга проверяйте на минимальных синтетических HTML-фрагментах.
 Не коммитьте дампы личного кабинета, HAR-файлы и реальные учётные данные.
 

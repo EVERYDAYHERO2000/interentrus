@@ -16,7 +16,7 @@ class BalanceCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             logging.getLogger(__name__),
-            name="ISP Balance",
+            name="InterenetBalans",
             config_entry=entry,
             update_interval=timedelta(hours=1),
         )

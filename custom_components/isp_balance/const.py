@@ -1,4 +1,4 @@
-"""Constants for ISP Balance."""
+"""Constants for InterenetBalans."""
 
 DOMAIN = "isp_balance"
 PROVIDER_NETNORD = "netnord"
