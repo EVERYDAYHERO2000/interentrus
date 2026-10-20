@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="custom_components/isp_balance/brand/icon@2x.png" width="96" alt="InterenetBalans">
+  <img src="https://raw.githubusercontent.com/EVERYDAYHERO2000/interentrus/8572bcb3e6a21ebafd3c20afc556c856f374eff7/custom_components/isp_balance/brand/icon@2x.png" width="96" alt="InterenetBalans">
 </p>
 <h1 align="center">InterenetBalans</h1>
 <p align="center">Личные кабинеты провайдеров Московской области в Home Assistant<br>Нетнорд · Микронмедиа</p>
